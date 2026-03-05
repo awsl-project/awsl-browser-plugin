@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>AWSL Header Capture</h1>
+
+    <div class="field">
+      <label class="toggle-label">
+        <input type="checkbox" id="enabled">
+        <span>启用自动捕获</span>
+      </label>
+    </div>
+
+    <div class="field">
+      <label>时间范围</label>
+      <div class="time-range">
+        <input type="time" id="startTime" value="08:00">
+        <span>~</span>
+        <input type="time" id="endTime" value="22:00">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="weiboUrl">微博页面</label>
+      <input type="url" id="weiboUrl" placeholder="https://weibo.com/u/1260797924">
+    </div>
+
+    <div class="field">
+      <label for="uploadUrl">上传地址</label>
+      <input type="url" id="uploadUrl" placeholder="https://awsl.api.awsl.icu/admin/wb_headers">
+    </div>
+
+    <div class="field">
+      <label for="apiToken">API Token</label>
+      <input type="password" id="apiToken" placeholder="Bearer token for authentication">
+    </div>
+
+    <div class="actions">
+      <button id="saveBtn">保存配置</button>
+      <button id="runNowBtn" class="secondary">立即执行</button>
+    </div>
+
+    <div class="status-section">
+      <h2>运行状态</h2>
+      <div class="status-row">
+        <span class="status-label">当前状态</span>
+        <span id="phase" class="status-value">-</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">今日计划</span>
+        <span id="scheduledTime" class="status-value">-</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">上次运行</span>
+        <span id="lastRunDate" class="status-value">-</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">运行结果</span>
+        <span id="lastRunResult" class="status-value">-</span>
+      </div>
+    </div>
+
+    <div class="log-section">
+      <div class="log-header">
+        <h2>日志</h2>
+        <button id="clearLogsBtn" class="link-btn">清空</button>
+      </div>
+      <div id="logList" class="log-list">
+        <div class="log-empty">暂无日志</div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

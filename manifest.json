@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "AWSL Weibo Header Capture",
+  "version": "1.0.0",
+  "description": "自动捕获微博 API 请求 headers 并上传到指定服务器",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "*://weibo.com/*",
+    "*://*.weibo.com/*",
+    "*://*.weibo.cn/*",
+    "https://awsl.api.awsl.icu/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
