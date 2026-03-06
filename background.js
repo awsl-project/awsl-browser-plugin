@@ -9,7 +9,7 @@ const DEFAULT_CONFIG = {
   enabled: true,
   startTime: '08:00',
   endTime: '22:00',
-  weiboUrl: 'https://weibo.com/u/1260797924',
+  weiboUrl: '',
   uploadUrl: 'https://awsl.api.awsl.icu/admin/wb_headers',
   apiToken: '',
 };
@@ -111,7 +111,7 @@ function normalizeConfig(raw) {
   c.startTime = normalizeTime(c.startTime) || DEFAULT_CONFIG.startTime;
   c.endTime = normalizeTime(c.endTime) || DEFAULT_CONFIG.endTime;
   c.enabled = c.enabled === true;
-  if (typeof c.weiboUrl !== 'string' || !c.weiboUrl) c.weiboUrl = DEFAULT_CONFIG.weiboUrl;
+  if (typeof c.weiboUrl !== 'string') c.weiboUrl = DEFAULT_CONFIG.weiboUrl;
   if (typeof c.uploadUrl !== 'string') c.uploadUrl = DEFAULT_CONFIG.uploadUrl;
   if (typeof c.apiToken !== 'string') c.apiToken = '';
   return c;
@@ -200,21 +200,30 @@ async function scheduleNextCapture() {
     return;
   }
 
-  const randomDate = randomTimeBetween(config.startTime, config.endTime);
-  if (!randomDate) {
-    addLog('时间范围无效');
-    return;
-  }
+  const now = new Date();
+  const s = parseTime(config.startTime);
+  const e = parseTime(config.endTime);
+  if (!s || !e) { addLog('时间范围无效'); return; }
 
-  const now = Date.now();
-  let whenMs = randomDate.getTime();
+  const endToday = new Date(now);
+  endToday.setHours(e.hour, e.minute, 0, 0);
 
-  // If the random time already passed today, schedule for tomorrow
-  if (whenMs < now) {
-    addLog('随机时间已过，调度至明天');
+  // If current time already past endTime, schedule for tomorrow
+  if (now >= endToday) {
+    addLog('今日时间窗口已过，调度至明天');
     await scheduleTomorrow(config);
     return;
   }
+
+  // Random range: max(startTime, now) ~ endTime
+  const startToday = new Date(now);
+  startToday.setHours(s.hour, s.minute, 0, 0);
+  const rangeStart = now > startToday ? now : startToday;
+  const range = endToday.getTime() - rangeStart.getTime();
+  if (range <= 0) { addLog('时间范围无效'); return; }
+
+  const whenMs = rangeStart.getTime() + Math.floor(Math.random() * range);
+  const randomDate = new Date(whenMs);
 
   await saveState({
     scheduledTime: randomDate.toISOString(),
@@ -223,9 +232,9 @@ async function scheduleNextCapture() {
   });
 
   if (chrome?.alarms?.create) {
-    chrome.alarms.create(ALARM_CAPTURE, { when: Math.max(whenMs, now + 1000) });
-    addLog('已调度捕获: ' + randomDate.toLocaleTimeString());
+    chrome.alarms.create(ALARM_CAPTURE, { when: Math.max(whenMs, Date.now() + 1000) });
   }
+  addLog('已调度捕获: ' + randomDate.toLocaleTimeString());
 }
 
 async function scheduleTomorrow(config) {
@@ -275,6 +284,12 @@ let captureState = {
 
 async function startCapture() {
   const config = await getConfig();
+  if (!config.weiboUrl) {
+    addLog('未配置微博页面 URL');
+    await saveState({ phase: 'done', lastRunDate: getTodayString(), lastRunResult: 'error: no weibo URL', lastRunTime: new Date().toISOString() });
+    await scheduleNextCapture();
+    return;
+  }
   if (!config.apiToken) {
     addLog('未配置 API Token');
     await saveState({ phase: 'done', lastRunDate: getTodayString(), lastRunResult: 'error: no API token', lastRunTime: new Date().toISOString() });
@@ -488,6 +503,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       addLog('手动触发执行');
       await saveState({ phase: 'idle', lastRunDate: '' });
       await startCapture();
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+
+  if (msg.type === 'reschedule') {
+    (async () => {
+      addLog('手动重置调度');
+      await saveState({ phase: 'idle', lastRunDate: '' });
+      await scheduleNextCapture();
       sendResponse({ ok: true });
     })();
     return true;

@@ -13,6 +13,7 @@ const els = {
   apiToken: $('#apiToken'),
   saveBtn: $('#saveBtn'),
   runNowBtn: $('#runNowBtn'),
+  rescheduleBtn: $('#rescheduleBtn'),
   phase: $('#phase'),
   scheduledTime: $('#scheduledTime'),
   lastRunDate: $('#lastRunDate'),
@@ -55,14 +56,16 @@ const PHASE_LABELS = {
   done: '已完成',
 };
 
-function updateUI(config, state) {
+function updateConfigUI(config) {
   els.enabled.checked = config.enabled;
   els.startTime.value = config.startTime;
   els.endTime.value = config.endTime;
   els.weiboUrl.value = config.weiboUrl;
   els.uploadUrl.value = config.uploadUrl;
   els.apiToken.value = config.apiToken;
+}
 
+function updateStatusUI(state) {
   els.phase.textContent = PHASE_LABELS[state.phase] || state.phase;
   els.scheduledTime.textContent = state.scheduledTime ? formatTime(state.scheduledTime) : '-';
   els.lastRunDate.textContent = state.lastRunDate || '-';
@@ -78,10 +81,17 @@ function updateUI(config, state) {
   }
 }
 
+let initialLoaded = false;
+
 async function loadStatus() {
   try {
     const resp = await chrome.runtime.sendMessage({ type: 'getStatus' });
-    if (resp) updateUI(resp.config, resp.state);
+    if (!resp) return;
+    if (!initialLoaded) {
+      updateConfigUI(resp.config);
+      initialLoaded = true;
+    }
+    updateStatusUI(resp.state);
   } catch (e) {
     console.warn('[AWSL Popup] loadStatus failed', e);
   }
@@ -104,7 +114,10 @@ els.saveBtn.addEventListener('click', async () => {
 
   try {
     const resp = await chrome.runtime.sendMessage({ type: 'saveConfig', config });
-    if (resp) updateUI(resp.config, resp.state);
+    if (resp) {
+      updateConfigUI(resp.config);
+      updateStatusUI(resp.state);
+    }
     showToast('已保存');
   } catch (e) {
     showToast('保存失败: ' + e.message, 'error');
@@ -125,6 +138,16 @@ els.runNowBtn.addEventListener('click', async () => {
     setTimeout(() => { loadStatus(); loadLogs(); }, 5000);
   } catch (e) {
     showToast('执行失败: ' + e.message, 'error');
+  }
+});
+
+els.rescheduleBtn.addEventListener('click', async () => {
+  try {
+    await chrome.runtime.sendMessage({ type: 'reschedule' });
+    showToast('已重置调度');
+    setTimeout(() => { loadStatus(); loadLogs(); }, 1000);
+  } catch (e) {
+    showToast('重置失败: ' + e.message, 'error');
   }
 });
 
